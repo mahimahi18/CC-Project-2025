@@ -1,0 +1,10 @@
+begin program:
+begin VarDecl:
+	(num1, int);
+	(print, char);
+	(num2, int);
+	(sum_tem_123, int);
+end VarDecl
+num1:= (10, 2);
+char1:='d';
+str1:="string dg baby";
