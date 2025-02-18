@@ -3,10 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-
-// op_stage: 0 = expecting first operand, 1 = first operand read (expect operator),
+// op_stage 0 = expecting first operand, 1 = first operand read (expect operator),
 // 2 = operator read (expect second operand)
-
 int op_stage = 0;
 int operand1, operand2;
 int base1, base2;
@@ -20,25 +18,55 @@ void perform_arithmetic();
 void print_token(const char* type, const char* value) {
     printf("<%s, %s>\n", type, value);
 }
+
+int validate_integer_constant(const char *numStr, int base) {
+    for (int i = 0; numStr[i] != '\0'; i++) {
+        char c = numStr[i];
+        if (base == 2) {
+            if (c != '0' && c != '1')
+                return 0;
+        } else if (base == 8) {
+            if (c < '0' || c > '7')
+                return 0;
+        } else if (base == 10) {
+            if (c < '0' || c > '9')
+                return 0;
+        } else {
+            return 0;
+        }
+    }
+    return 1;
+}
 %}
 
 
 INTCONST    \([0-9]+,[ ]*(10|8|2)\)
 
 ARITH_OP    [+\-*/%]
-REL_OP      "="|"<"|">"|"<="|">="|"<>" 
+REL_OP      "<"|">"|"<="|">="|"<>" 
 ASSIGN_OP   ":="|"\+="|"-="|"*="|"/="|"%="
-SEPARATOR   [\(\),;{}\\"@]
+SEPARATOR   [:\(\),;{}\\"]
 
 %%
 
 {INTCONST} {
+    char numStr[100];
+    int base;
+    int count = sscanf(yytext, "(%[^,],%d)", numStr, &base); //stop when comma is found
+    if(count == 2) {
+        if(base != 10 && base != 8 && base != 2) {
+            printf("%s Error: invalid integer constant (invalid base)\n", yytext);
+        } else if(!validate_integer_constant(numStr, base)) {
+            printf("%s Error: invalid integer constant\n", yytext);
+        } else {
+            print_token("Integer constant", yytext);
+        }
+    } else {
+        printf("%s Error: invalid integer constant format\n", yytext);
+    }
     // Extract the numeric literal and base
     int num, b;
     sscanf(yytext, "(%d, %d)", &num, &b);
-    
-    // Print the token for the integer constant
-    print_token("INTEGER_CONSTANT", yytext);
     
     if(op_stage == 0) {
         operand1 = num;
@@ -85,7 +113,7 @@ SEPARATOR   [\(\),;{}\\"@]
 
 
 . {
-    printf("INVALID TOKEN: %s\n", yytext);
+    //printf("INVALID TOKEN: %s\n", yytext);
 }
 
 %%
