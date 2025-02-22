@@ -16,7 +16,7 @@ void convertDecimalToTargetBase(int decimalVal, int base, char *resultBuf);
 void perform_arithmetic();
 
 void print_token(const char* type, const char* value) {
-    printf("<%s, %s>\n", type, value);
+    printf("%s, %s\n", type, value);
 }
 
 int validate_integer_constant(const char *numStr, int base) {
@@ -160,6 +160,7 @@ void convertDecimalToTargetBase(int decimalVal, int base, char *resultBuf) {
 
 void perform_arithmetic() {
     int decOp1 = convertLiteralToDecimal(operand1, base1);
+    
     int decOp2 = convertLiteralToDecimal(operand2, base2);
     int targetBase;
     
