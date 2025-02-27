@@ -18,7 +18,7 @@ int is_keyword = 0;
 char declared_vars[MAX_VARS][50];
 int var_cnt = 0;
 
-// For print/scan validation
+// For print and scan validation
 int in_io_statement = 0;
 char io_buffer[1024];
 int io_buffer_pos = 0;
@@ -61,9 +61,9 @@ int validate_integer_constant(const char *numStr, int base) {
     return 1;
 }
 
-// print statement validation
+// Function to validate print statement
 int validate_print_statement(const char *stmt) {
-    // Count @ symbols in the string part
+    // Count @ symbols
     int at_count = 0;
     int in_string = 0;
     int param_count = 0;
@@ -82,27 +82,31 @@ int validate_print_statement(const char *stmt) {
     return (at_count == 0 || param_count == at_count);
 }
 
-// scan statement validation
+// Function to validate scan statement
 int validate_scan_statement(const char *stmt) {
-    
     int at_count = 0;
     int in_string = 0;
     int param_count = 0;
+    int flag=0;
     
     for (int i = 0; stmt[i] != '\0'; i++) {
         if (stmt[i] == '"') {
             in_string = !in_string;
         } else if (in_string && stmt[i] == '@') {
             at_count++;
-        } else if (!in_string && stmt[i] == ',') {
+            flag=0;
+        } else if (in_string && stmt[i] == ',') {
+            flag=1;
+        }else if (!in_string && stmt[i] == ',') {
             if (at_count > 0) param_count++;
         }
     }
-    return (at_count > 0 && param_count == at_count);
+    
+    return (at_count > 0 && param_count == at_count && !flag);
 }
+//We now define our states
 %}
 
-//Start Conditions
 %x COMMENT
 %x IO_STATEMENT
 
@@ -145,7 +149,6 @@ SEPARATOR   [:()\.,;{}\\"]
     BEGIN(IO_STATEMENT);
 }
 
-//IO Statement Modes
 <IO_STATEMENT>";" {
     strcat(io_buffer, yytext);
     
@@ -174,12 +177,23 @@ SEPARATOR   [:()\.,;{}\\"]
     }
 }
 
-	<IO_STATEMENT>\n {
-	    if (io_buffer_pos < 1023) {
-	        io_buffer[io_buffer_pos++] = ' ';
-	        io_buffer[io_buffer_pos] = '\0';
-	    }
-	}
+<IO_STATEMENT>\n {
+    if (io_buffer_pos < 1023) {
+        io_buffer[io_buffer_pos++] = ' ';
+        io_buffer[io_buffer_pos] = '\0';
+    }
+    
+    if (in_io_statement==1) {
+        printf("%s\tError: invalid output statement\n", io_buffer);
+        in_io_statement = 0; 
+        BEGIN(0);  
+    }
+    if (in_io_statement==2) {
+        printf("%s\tError: invalid input statement\n", io_buffer);
+        in_io_statement = 0; 
+        BEGIN(0);  
+    }
+}
 
 {SEPARATOR} {
     print_token("Separator", yytext);
@@ -217,10 +231,10 @@ SEPARATOR   [:()\.,;{}\\"]
     }
     else {
 	 for (int i = 0; i < 15; i++) {
-		if (strcmp(yytext, keywords[i]) == 0){
-		        is_keyword = 1;
-		        print_token("Keyword", yytext);
-		}
+		        if (strcmp(yytext, keywords[i]) == 0){
+		            is_keyword = 1;
+		            print_token("Keyword", yytext);
+		        }
          }
     	 if (!is_keyword) {
                 if (u_cnt(yytext) <= 1) {  
@@ -236,7 +250,7 @@ SEPARATOR   [:()\.,;{}\\"]
 {INTCONST} {
     char numStr[100];
     int base;
-    int count = sscanf(yytext, "(%[^,],%d)", numStr, &base); //extracts values and returns number of successfully extracted values
+    int count = sscanf(yytext, "(%[^,],%d)", numStr, &base);
     if (count == 2) {
         if (base != 10 && base != 8 && base != 2) {
             printf("%s\tError: invalid integer constant (invalid base)\n", yytext);
